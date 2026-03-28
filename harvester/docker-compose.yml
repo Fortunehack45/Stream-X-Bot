@@ -1,0 +1,31 @@
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# Zero-Ops PostgreSQL service for the Movie Harvester bot.
+# Run:  docker compose up -d
+# Stop: docker compose down
+# Wipe: docker compose down -v  (destroys all stored data)
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: harvester-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-movie_harvester}
+      POSTGRES_USER:     ${DB_USER:-harvester}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strongpassword}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - harvester_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-harvester} -d ${DB_NAME:-movie_harvester}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  harvester_pgdata:
+    driver: local

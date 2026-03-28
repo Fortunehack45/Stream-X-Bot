@@ -1,0 +1,20 @@
+# ── HTTP & Parsing ─────────────────────────────────────────────────────────
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.1.0                  # faster BS4 HTML parser
+
+# ── Browser Automation ─────────────────────────────────────────────────────
+selenium>=4.18.0
+webdriver-manager>=4.0.1     # auto-downloads matching ChromeDriver
+
+# ── TMDB Metadata ──────────────────────────────────────────────────────────
+tmdbv3api>=1.9.0
+
+# ── Database ───────────────────────────────────────────────────────────────
+psycopg2-binary>=2.9.9       # binary wheel — no libpq build needed on Windows
+
+# ── Scheduling ─────────────────────────────────────────────────────────────
+schedule>=1.2.1
+
+# ── Configuration & Utilities ──────────────────────────────────────────────
+python-dotenv>=1.0.1
