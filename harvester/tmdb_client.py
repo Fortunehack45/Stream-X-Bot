@@ -116,13 +116,26 @@ class TMDBClient:
             log.debug(
                 "Fast-path enrich: %r (TMDB ID: %s)", raw_entry.title, raw_entry.tmdb_id
             )
+            # Extract release date / first air date
+            release_date = getattr(raw_entry, "release_date", None)
+            if not release_date:
+                release_date = getattr(raw_entry, "first_air_date", None)
+
+            # Construct backdrop URL
+            raw_backdrop = getattr(raw_entry, "backdrop_path", None)
+            backdrop_url = f"{_TMDB_IMAGE_BASE_URL}{raw_backdrop}" if raw_backdrop else None
+
             return MovieRecord(
                 title=raw_entry.title,
+                media_type=getattr(raw_entry, "media_type", "movie"),
                 source_url=raw_entry.source_url,
                 embed_url=getattr(raw_entry, "embed_url", None),
                 tmdb_id=raw_entry.tmdb_id,
                 poster_url=raw_entry.poster_url,
+                backdrop_url=backdrop_url,
                 rating=raw_entry.rating,
+                release_date=release_date,
+                popularity=getattr(raw_entry, "popularity", None),
                 overview=raw_entry.overview,
                 genres=getattr(raw_entry, "genres", []),
                 director=getattr(raw_entry, "director", None),

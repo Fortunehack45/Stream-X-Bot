@@ -77,7 +77,10 @@ class RawMovieEntry:
     embed_url:        Optional[str]   = None
     tmdb_id:          Optional[int]   = None
     poster_url:       Optional[str]   = None
+    backdrop_path:    Optional[str]   = None
     rating:           Optional[float] = None
+    release_date:     Optional[str]   = None
+    popularity:       Optional[float] = None
     overview:         Optional[str]   = None
     media_type:       str             = "movie"
     genres:           list[str]       = field(default_factory=list)
@@ -296,7 +299,10 @@ class MovieScraper:
                     embed_url=None,
                     tmdb_id=tmdb_id,
                     poster_url=poster_url,
+                    backdrop_path=details.get("backdrop_path"),
                     rating=rating,
+                    release_date=details.get("release_date") or details.get("first_air_date"),
+                    popularity=details.get("popularity"),
                     overview=details.get("overview") or None,
                     media_type=media_type,
                     genres=genres,

@@ -15,9 +15,14 @@ Usage:
 
 from __future__ import annotations
 
+from typing import Any
+
 import argparse
+import http.server
+import os
 import signal
 import sys
+import threading
 import time
 
 import schedule # type: ignore
@@ -29,6 +34,29 @@ from scraper import MovieScraper # type: ignore
 from tmdb_client import TMDBClient # type: ignore
 
 log = get_logger(__name__)
+
+
+# ── Health Check Server (for Render Web Services) ─────────────────────────────
+
+class HealthCheckHandler(http.server.BaseHTTPRequestHandler):
+    """Minimal handler for Render health checks."""
+    def do_GET(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"OK - Harvester is awake and hunting.")
+
+    def log_message(self, format: str, *args: Any) -> None:
+        """Silence logs to prevent noise."""
+        return
+
+def start_health_server() -> None:
+    """Start the health check server in a background thread."""
+    port = int(os.getenv("PORT", "8080"))
+    server = http.server.HTTPServer(("", port), HealthCheckHandler)
+    log.info("Health-check server listening on port %d (Render mode active).", port)
+    server.serve_forever()
+
 
 
 # ── Harvester Bot ─────────────────────────────────────────────────────────────
@@ -146,6 +174,9 @@ def main() -> None:
     # Register graceful shutdown handlers.
     signal.signal(signal.SIGINT,  _handle_shutdown)
     signal.signal(signal.SIGTERM, _handle_shutdown)
+
+    # Start health check server for Render Web Service compatibility.
+    threading.Thread(target=start_health_server, daemon=True).start()
 
     bot = HarvesterBot()
 
