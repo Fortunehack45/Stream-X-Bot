@@ -20,13 +20,13 @@ import signal
 import sys
 import time
 
-import schedule
+import schedule # type: ignore
 
-from config import settings
-from database import DatabaseManager
-from logger import get_logger
-from scraper import MovieScraper
-from tmdb_client import TMDBClient
+from config import settings # type: ignore
+from database import DatabaseManager # type: ignore
+from logger import get_logger # type: ignore
+from scraper import MovieScraper # type: ignore
+from tmdb_client import TMDBClient # type: ignore
 
 log = get_logger(__name__)
 
@@ -78,8 +78,8 @@ class HarvesterBot:
         log.info("─" * 60)
         log.info("Harvest cycle starting…")
 
-        new_count    = 0
-        failed_count = 0
+        new_count: int = 0
+        failed_count: int = 0
 
         with MovieScraper() as scraper:
             raw_entries = scraper.harvest()
@@ -98,11 +98,11 @@ class HarvesterBot:
                         log.warning(
                             "Skipping %r — no TMDB match found.", raw_entry.title
                         )
-                        failed_count += 1
+                        failed_count += 1 # type: ignore
                         continue
 
                     self._db.upsert(enriched_record)
-                    new_count += 1
+                    new_count += 1 # type: ignore
 
                 except Exception as exc:
                     # Log the failure but continue processing remaining entries.
@@ -110,7 +110,7 @@ class HarvesterBot:
                         "Failed to process entry %r: %s", raw_entry.title, exc,
                         exc_info=True,
                     )
-                    failed_count += 1
+                    failed_count += 1 # type: ignore
 
         total_in_db = self._db.count_movies()
         log.info(

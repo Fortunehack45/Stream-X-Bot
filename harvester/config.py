@@ -9,6 +9,7 @@ Usage:
 
 import os
 from dataclasses import dataclass, field
+from typing import Optional
 from dotenv import load_dotenv # type: ignore
 
 # Load .env from the same directory as this file (or parent directories).
@@ -44,18 +45,25 @@ class Settings:
     retry_base_delay_seconds: float
 
     # ── PostgreSQL ───────────────────────────────────────────────────────────
-    db_host: str
-    db_port: int
-    db_name: str
-    db_user: str
-    db_password: str
+    database_url: Optional[str] = None
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "movie_harvester"
+    db_user: str = "harvester"
+    db_password: Optional[str] = None
 
     # ── Scheduler ────────────────────────────────────────────────────────────
-    scrape_interval_hours: int
+    scrape_interval_hours: int = 3
 
     @property
     def db_dsn(self) -> str:
         """Return a psycopg2-compatible DSN connection string."""
+        if self.database_url:
+            return str(self.database_url)
+            
+        if not self.db_password:
+            raise EnvironmentError("Either DATABASE_URL or DB_PASSWORD must be provided.")
+            
         return (
             f"host={self.db_host} "
             f"port={self.db_port} "
@@ -73,10 +81,11 @@ settings = Settings(
     page_load_wait_seconds=int(_optional("PAGE_LOAD_WAIT_SECONDS", "8")),
     max_retry_attempts=int(_optional("MAX_RETRY_ATTEMPTS", "5")),
     retry_base_delay_seconds=float(_optional("RETRY_BASE_DELAY_SECONDS", "2")),
+    database_url=_optional("DATABASE_URL", ""),
     db_host=_optional("DB_HOST", "localhost"),
     db_port=int(_optional("DB_PORT", "5432")),
     db_name=_optional("DB_NAME", "movie_harvester"),
     db_user=_optional("DB_USER", "harvester"),
-    db_password=_require("DB_PASSWORD"),
+    db_password=_optional("DB_PASSWORD", ""),
     scrape_interval_hours=int(_optional("SCRAPE_INTERVAL_HOURS", "3")),
 )

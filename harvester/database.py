@@ -36,10 +36,14 @@ CREATE TABLE IF NOT EXISTS movies (
     id               SERIAL PRIMARY KEY,
     tmdb_id          INTEGER  UNIQUE,
     title            TEXT     NOT NULL,
+    media_type       TEXT     DEFAULT 'movie',
     source_url       TEXT     UNIQUE NOT NULL,
     embed_url        TEXT,
     poster_url       TEXT,
+    backdrop_url     TEXT,
     rating           NUMERIC(3,1),
+    release_date     TEXT,
+    popularity       NUMERIC,
     overview         TEXT,
     genres           TEXT[],
     director         TEXT,
@@ -52,18 +56,24 @@ CREATE TABLE IF NOT EXISTS movies (
 
 _UPSERT_MOVIE = """
 INSERT INTO movies
-    (tmdb_id, title, source_url, embed_url, poster_url, rating, overview,
-     genres, director, cast_members, producers, related_tmdb_ids, harvested_at)
+    (tmdb_id, title, media_type, source_url, embed_url, poster_url, backdrop_url,
+     rating, release_date, popularity, overview, genres, director, 
+     cast_members, producers, related_tmdb_ids, harvested_at)
 VALUES
-    (%(tmdb_id)s, %(title)s, %(source_url)s, %(embed_url)s,
-     %(poster_url)s, %(rating)s, %(overview)s, %(genres)s, %(director)s,
+    (%(tmdb_id)s, %(title)s, %(media_type)s, %(source_url)s, %(embed_url)s, 
+     %(poster_url)s, %(backdrop_url)s, %(rating)s, %(release_date)s, 
+     %(popularity)s, %(overview)s, %(genres)s, %(director)s,
      %(cast_members)s, %(producers)s, %(related_tmdb_ids)s, %(harvested_at)s)
 ON CONFLICT (source_url) DO UPDATE SET
     tmdb_id          = EXCLUDED.tmdb_id,
     title            = EXCLUDED.title,
+    media_type       = EXCLUDED.media_type,
     embed_url        = EXCLUDED.embed_url,
     poster_url       = EXCLUDED.poster_url,
+    backdrop_url     = EXCLUDED.backdrop_url,
     rating           = EXCLUDED.rating,
+    release_date     = EXCLUDED.release_date,
+    popularity       = EXCLUDED.popularity,
     overview         = EXCLUDED.overview,
     genres           = EXCLUDED.genres,
     director         = EXCLUDED.director,
@@ -84,10 +94,14 @@ class MovieRecord:
     """
     title:            str
     source_url:       str
+    media_type:       str             = "movie"
     embed_url:        Optional[str]   = None
     tmdb_id:          Optional[int]   = None
     poster_url:       Optional[str]   = None
+    backdrop_url:     Optional[str]   = None
     rating:           Optional[float] = None
+    release_date:     Optional[str]   = None
+    popularity:       Optional[float] = None
     overview:         Optional[str]   = None
     genres:           list[str]       = field(default_factory=list)
     director:         Optional[str]   = None
@@ -115,7 +129,17 @@ class DatabaseManager:
     @contextlib.contextmanager
     def _get_connection(self):
         """Yield a psycopg2 connection and auto-commit or rollback on exit."""
-        conn: PgConnection = psycopg2.connect(self._dsn)
+        # Supavisor (Supabase Pooler) can be picky about URI strings.
+        # We'll use individual parameters for maximum reliability.
+        conn: PgConnection = psycopg2.connect(
+            host=settings.db_host,
+            port=settings.db_port,
+            database=settings.db_name,
+            user=settings.db_user,
+            password=settings.db_password,
+            sslmode="require",
+            connect_timeout=15
+        )
         try:
             yield conn
             conn.commit()
@@ -152,10 +176,14 @@ class DatabaseManager:
         params = {
             "tmdb_id":          record.tmdb_id,
             "title":            record.title,
+            "media_type":       record.media_type,
             "source_url":       record.source_url,
             "embed_url":        record.embed_url,
             "poster_url":       record.poster_url,
+            "backdrop_url":     record.backdrop_url,
             "rating":           record.rating,
+            "release_date":     record.release_date,
+            "popularity":       record.popularity,
             "overview":         record.overview,
             "genres":           record.genres,
             "director":         record.director,
