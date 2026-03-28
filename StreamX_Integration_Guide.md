@@ -37,55 +37,68 @@ The harvester needs to know where to save the deep metadata it extracts from TMD
 
 ---
 
-## Phase 3: Connect the React Front-End
-Now, your cloud database is filling up with thousands of highly-enriched movie entries. It's time to display them on your Vercel site.
+## Phase 3: Connect the Vite Front-End
+Now, your cloud database is filling up with thousands of highly-enriched movie entries. It's time to display them on your Vite site.
 
 1. In Supabase, go to **Settings** > **API**. Copy the **Project URL** and the **anon `public` API Key**.
-2. Open your React/Next.js front-end repository.
-3. Add these to your front-end `.env.local` file:
+2. Open your Vite front-end repository.
+3. Add these to your front-end `.env` or `.env.local` file (Vite requires the `VITE_` prefix):
    ```env
-   NEXT_PUBLIC_SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
-   NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5..."
+   VITE_SUPABASE_URL="https://xogolplgmkwyvwmioqst.supabase.co"
+   VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5..."
    ```
 4. Install the Supabase Javascript client:
    ```bash
    npm install @supabase/supabase-js
    ```
-5. Create a file called `lib/supabaseClient.js` (or `.ts`):
+5. Create a file called `src/supabaseClient.js` (or `.ts`):
    ```javascript
    import { createClient } from '@supabase/supabase-js'
 
-   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
    export const supabase = createClient(supabaseUrl, supabaseAnonKey)
    ```
 
 ---
 
-## Phase 4: Swap TMDB API for Your Own Database
-Right now, your website fetches directly from TMDB.
+## Phase 4: Displaying Your Harvester Data
+In Vite, you can now fetch your enriched data inside your components (e.g., in a `useEffect` hook).
 
-**Old Code (Fetching from TMDB):**
+**Example Component Logic:**
 ```javascript
-const response = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=...`)
-const data = await response.json()
-```
+import { useEffect, useState } from 'react'
+import { supabase } from './supabaseClient'
 
-**New Code (Fetching from your Supabase Database):**
-```javascript
-import { supabase } from '../lib/supabaseClient'
+function MovieList() {
+  const [movies, setMovies] = useState([])
 
-// Fetch all popular movies directly from YOUR database
-const { data: movies, error } = await supabase
-  .from('movies')
-  .select('*')
-  .order('rating', { ascending: false })
-  .limit(20);
+  useEffect(() => {
+    async function fetchMovies() {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .order('rating', { ascending: false })
+        .limit(20)
+      
+      if (data) setMovies(data)
+    }
+    fetchMovies()
+  }, [])
 
-// You now have access to rich metadata that TMDB doesn't normally serve in a list!
-console.log(movies[0].cast_members) // ['Leonardo DiCaprio', 'Joseph Gordon-Levitt', ...]
-console.log(movies[0].genres)       // ['Action', 'Sci-Fi']
+  return (
+    <div>
+      {movies.map(movie => (
+        <div key={movie.id}>
+          <h1>{movie.title}</h1>
+          <p>Cast: {movie.cast_members.join(', ')}</p>
+          <p>Genres: {movie.genres.join(', ')}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
 ```
 
 ---
@@ -94,4 +107,4 @@ console.log(movies[0].genres)       // ['Action', 'Sci-Fi']
 To keep the database actively updated every 3 hours as configured in `config.py`, you must keep the Python bot running. 
 
 - **Option A (Free):** Leave a terminal window open on your computer running `python main.py`.
-- **Option B (Professional):** Deploy the `Stream-X-Bot` GitHub repository to a free/cheap cloud container service like **Render**, **Railway**, or a **DigitalOcean Droplet**. Because we included a `requirements.txt` and a `docker-compose.yml`, deploying to these services is a 1-click process. Once deployed, it will run the 24/7 autonomous loop forever.
+- **Option B (Professional):** Deploy the `Stream-X-Bot` GitHub repository to a cloud container service like **Render**, **Railway**, or a **DigitalOcean Droplet**. Once deployed, it will run the 24/7 autonomous loop forever.
